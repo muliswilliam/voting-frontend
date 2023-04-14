@@ -11,7 +11,7 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { MoonIcon, SunIcon } from '@chakra-ui/icons'
-import { ConnectKitButton } from 'connectkit'
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { NavLinks } from '../../utils/options';
 
 
@@ -63,7 +63,7 @@ export default function Nav() {
               direction={'row'}
               spacing={7}
             >
-              <ConnectKitButton mode={colorMode} />
+              <ConnectButton />
               <Button onClick={toggleColorMode}>
                 {colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               </Button>

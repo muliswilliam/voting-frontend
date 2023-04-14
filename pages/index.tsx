@@ -1,12 +1,14 @@
+import React from 'react';
 import Head from 'next/head'
-import { Inter } from 'next/font/google'
-import { useAccount, useContract, useContractRead } from 'wagmi'
+import { useContractRead, useProvider } from 'wagmi'
 import {
   Box,
+  Button,
   Flex,
   Text,
   useColorMode,
   useColorModeValue,
+  useDisclosure,
 } from '@chakra-ui/react'
 
 // abi
@@ -14,16 +16,22 @@ import contract from '../contracts/ElectoralCommission.json'
 
 // components
 import { MainLayout } from '../components/layouts/main-layout'
+import { CreateElectionModal } from '../components/create-election-modal/create-election-modal';
 
 export default function Home() {
+  const { isOpen, onClose, onOpen } = useDisclosure()
   const { colorMode } = useColorMode()
-  const {data, isError, isLoading, error } = useContractRead({
-    address:  '0x4B29246C068b588b6cA35E60eB2e05F36E7CffD8',
+  const provider = useProvider()
+  const {data, isLoading, isError } = useContractRead({
     abi: contract.abi,
+    address: process.env.NEXT_PUBLIC_ELECTORAL_COMMISSION_CONTRACT_ADDRESS  as `0x${string}`,
     functionName: 'getElections',
+    enabled: true
   })
 
-  console.log({ isError, isLoading, data, error })
+  if(!isLoading && !isError && data) {
+    console.log(data)
+  }
 
   return (
     <MainLayout>
@@ -77,10 +85,22 @@ export default function Home() {
               Create elections, manage candidates and facilitate voting on top
               of blockchain.
             </Text>
+            <Button
+              mt={10}
+              w={150}
+              onClick={onOpen}
+              variant='solid'
+              colorScheme='purple'
+            >
+              Create election
+            </Button>
           </Flex>
         </Box>
       </Box>
-
+      <CreateElectionModal
+        isOpen={isOpen}
+        onClose={onClose}
+      />
     </MainLayout>
   )
 }
