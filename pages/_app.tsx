@@ -13,12 +13,12 @@ import {
 import { ChakraProvider, useColorMode } from '@chakra-ui/react'
 import '@rainbow-me/rainbowkit/styles.css'
 
-
 export default function App({ Component, pageProps }: AppProps) {
   const { colorMode } = useColorMode()
   const { chains, provider } = configureChains(
     [sepolia],
     [
+      alchemyProvider({ apiKey: process.env.ALCHEMY_ID || '' }),
       jsonRpcProvider({
         rpc: () => ({
           http: `https://rpc.sepolia.org/`,

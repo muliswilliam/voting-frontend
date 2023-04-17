@@ -1,4 +1,6 @@
 import React from 'react'
+import { useSigner } from 'wagmi'
+import { ethers } from 'ethers'
 import {
   Formik,
   FormikHelpers,
@@ -22,11 +24,9 @@ import {
   Text,
 } from '@chakra-ui/react'
 import { AddIcon, MinusIcon } from '@chakra-ui/icons'
-import { useSigner } from 'wagmi'
-import { ethers } from 'ethers'
 
 // abi
-import contract from '../contracts/ElectoralCommission.json'
+import contract from '../../contracts/ElectoralCommission.json'
 
 interface Candidate {
   name: string
@@ -35,6 +35,8 @@ interface Candidate {
 interface ElectionFormValues {
   electionName: string
   postName: string
+  startDate: number
+  endDate: number
   candidates: Candidate[]
 }
 
@@ -43,9 +45,24 @@ interface Props {
   onClose: () => void
 }
 
+const timestampToInputValue = (ts: number) => {
+  const date = new Date(ts)
+  return date.toISOString().substring(0, 10);
+}
+
 const electionFormSchema = Yup.object().shape({
   electionName: Yup.string().required('Election name is required.'),
   postName: Yup.string().required('Post name is required.'),
+  startDate: Yup.number().required('Election start date is required.').moreThan(
+    Date.now(),
+    'Election start date must be in the future.'
+  ),
+  endDate: Yup.number()
+    .required('Election end date is required.')
+    .moreThan(
+      Yup.ref('startDate'),
+      'Election end date must be after start date.'
+    ),
   candidates: Yup.array().of(
     Yup.object({
       name: Yup.string().required('Candidate name is required.'),
@@ -53,12 +70,17 @@ const electionFormSchema = Yup.object().shape({
   ),
 })
 
+const TWO_DAYS_IN_MILLISENCODS = 24 * 60 * 60 * 1000  * 2
+const EMPTY_CANDIDATE: Candidate = { name: '' }
+
 export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
   // state
   const initialValues: ElectionFormValues = {
     electionName: '',
     postName: '',
-    candidates: [{ name: '' }, { name: '' }],
+    candidates: [EMPTY_CANDIDATE, EMPTY_CANDIDATE],
+    startDate: Date.now(),
+    endDate: Date.now() + TWO_DAYS_IN_MILLISENCODS,
   }
   const [error, setError] = React.useState<string>('')
 
@@ -67,6 +89,7 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
   // hooks
   const toast = useToast()
   const { data: signer } = useSigner()
+
   // methods
   const onSubmit = React.useCallback(
     async (
@@ -90,8 +113,8 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
         const tx = await electoralCommission.createElection(
           values.electionName,
           values.postName,
-          Date.now(),
-          Date.now() + 60 * 60 * 24,
+          values.startDate,
+          values.endDate,
           candidates
         )
         await tx.wait()
@@ -129,6 +152,9 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
           touched,
           handleSubmit,
           handleChange,
+          handleBlur,
+          setFieldValue,
+          setFieldTouched,
           isValid,
           isSubmitting,
         }) => (
@@ -162,6 +188,7 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
                   touched.electionName && errors.electionName !== undefined
                 }
                 onChange={handleChange}
+                onBlur={handleBlur}
                 type='text'
                 placeholder='e.g Chairperson Election 2023'
                 autoComplete='off'
@@ -186,6 +213,7 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
                 name='postName'
                 value={values.postName}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 pr='4.5rem'
                 type='text'
                 placeholder='E.g Chairperson'
@@ -193,6 +221,56 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
               />
               {touched.postName && errors.postName && (
                 <FormErrorMessage>{errors.postName}</FormErrorMessage>
+              )}
+            </FormControl>
+            <FormControl
+              mt='2%'
+              isInvalid={touched.startDate && errors.startDate !== undefined}
+            >
+              <FormLabel
+                htmlFor='startDate'
+                fontWeight={'normal'}
+              >
+                Start date
+              </FormLabel>
+              <Input
+                type='date'
+                id='startDate'
+                autoComplete='off'
+                value={timestampToInputValue(values.startDate)}
+                onChange={(e) => {
+                  setFieldValue('startDate', new Date(e.target.value).getTime())
+                }}
+                onBlur={handleBlur}
+                onClick={() => setFieldTouched('startDate', true)}
+              />
+               {touched.startDate && errors.startDate && (
+                <FormErrorMessage>{errors.startDate}</FormErrorMessage>
+              )}
+            </FormControl>
+            <FormControl
+              mt='2%'
+              isInvalid={touched.endDate && errors.endDate !== undefined}
+            >
+              <FormLabel
+                htmlFor='endDate'
+                fontWeight={'normal'}
+              >
+                End date
+              </FormLabel>
+              <Input
+                type='date'
+                id='endDate'
+                autoComplete='off'
+                value={timestampToInputValue(values.endDate)}
+                onChange={(e) => {
+                  setFieldValue('endDate', new Date(e.target.value).getTime())
+                }}
+                onBlur={handleBlur}
+                onClick={() => setFieldTouched('endDate', true)}
+              />
+               {touched.endDate && errors.endDate && (
+                <FormErrorMessage>{errors.endDate}</FormErrorMessage>
               )}
             </FormControl>
             <HStack mt='24px'>
@@ -209,7 +287,7 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
                   icon={<AddIcon />}
                   aria-label='Add candidate'
                   colorScheme='green'
-                  onClick={() => boundArrayHelpers.push({ name: '' })}
+                  onClick={() => boundArrayHelpers.push(EMPTY_CANDIDATE)}
                 />
               </Tooltip>
             </HStack>
@@ -227,7 +305,7 @@ export default function CreateElectionForm({ onSubmitting, onClose }: Props) {
                             fontWeight={'normal'}
                             mt='2%'
                           >
-                            Candidate name
+                            Candidate {index + 1} name
                           </FormLabel>
                           <Input
                             id={`candidates.${index}.name`}

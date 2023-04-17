@@ -1,6 +1,6 @@
-import React from 'react';
+import React from 'react'
 import Head from 'next/head'
-import { useContractRead, useProvider } from 'wagmi'
+import { useAccount, useContractRead } from 'wagmi'
 import {
   Box,
   Button,
@@ -11,25 +11,33 @@ import {
   useDisclosure,
 } from '@chakra-ui/react'
 
+import { useIsMounted } from '../hooks/use-is-mounted'
+
 // abi
 import contract from '../contracts/ElectoralCommission.json'
 
 // components
 import { MainLayout } from '../components/layouts/main-layout'
-import { CreateElectionModal } from '../components/create-election-modal/create-election-modal';
+import { CreateElectionModal } from '../components/create-election-modal/create-election-modal'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 export default function Home() {
+  const isMounted = useIsMounted()
   const { isOpen, onClose, onOpen } = useDisclosure()
   const { colorMode } = useColorMode()
-  const provider = useProvider()
-  const {data, isLoading, isError } = useContractRead({
+  const { isConnected } = useAccount()
+  const { data, isLoading, isError } = useContractRead({
     abi: contract.abi,
-    address: process.env.NEXT_PUBLIC_ELECTORAL_COMMISSION_CONTRACT_ADDRESS  as `0x${string}`,
+    address: process.env
+      .NEXT_PUBLIC_ELECTORAL_COMMISSION_CONTRACT_ADDRESS as `0x${string}`,
     functionName: 'getElections',
-    enabled: true
+    enabled: true,
   })
+  const textColor = useColorModeValue('blackAlpha.800', 'whiteAlpha.800')
 
-  if(!isLoading && !isError && data) {
+  if (!isMounted) return null
+
+  if (!isLoading && !isError && data) {
     console.log(data)
   }
 
@@ -80,20 +88,25 @@ export default function Home() {
             <Text
               fontSize='2xl'
               fontWeight={700}
-              color={useColorModeValue('blackAlpha.800', 'whiteAlpha.800')}
+              color={textColor}
             >
               Create elections, manage candidates and facilitate voting on top
               of blockchain.
             </Text>
-            <Button
-              mt={10}
-              w={150}
-              onClick={onOpen}
-              variant='solid'
-              colorScheme='purple'
-            >
-              Create election
-            </Button>
+            <Box  mt={10}>
+              {isConnected ? (
+                <Button
+                  w={150}
+                  onClick={onOpen}
+                  variant='solid'
+                  colorScheme='purple'
+                >
+                  Create election
+                </Button>
+              ) : (
+                <ConnectButton />
+              )}
+            </Box>
           </Flex>
         </Box>
       </Box>

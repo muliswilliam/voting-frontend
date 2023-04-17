@@ -10,7 +10,7 @@ import {
   ModalOverlay,
   useDisclosure,
 } from '@chakra-ui/react'
-import CreateElectionForm from '../create-election-form'
+import CreateElectionForm from './create-election-form'
 
 interface Props {
   isOpen: boolean
